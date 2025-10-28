@@ -219,3 +219,55 @@ as you have noticed the group vars and hostvars in inventory are removed.
 
 NOTE: among group vars and host vars, host vars will takes more preceedence. 
 
+## Targeting specific hosts in the inventory
+
+Suppose in the inventory I have the following hosts:
+
+```
+[all]
+compute1 ansible_host=172.16.5.174  # ip=10.3.0.1 etcd_member_name=etcd1
+compute2 ansible_host=172.16.5.55 # ip=10.3.0.2 etcd_member_name=etcd2
+compute3 ansible_host=172.16.5.123  # ip=10.3.0.3 etcd_member_name=etcd3
+
+# ## configure a bastion host if your computes are not directly reachable
+# [bastion]
+# bastion ansible_host=x.x.x.x ansible_user=some_user
+
+[kube_control_plane]
+compute1
+compute2
+compute3
+
+[etcd]
+compute1
+compute2
+compute3
+
+
+[kube_node:children]
+kube_control_plane
+[kube_compute]
+compute1
+compute2
+compute3
+# compute4
+# compute5
+# compute6
+
+[calico_rr]
+
+[k8s_cluster:children]
+kube_control_plane
+kube_compute
+calico_rr
+```
+
+So here we have 3 hosts in the all group. SO if we want to target only compute2 and compute3, then we can run the following:
+
+```
+ansible-playbook -i invetory.ini playbook.yml --limit "compute2,compute3" 
+```
+So it will run the playbook against those 2 hosts..
+
+limit says that compute2 and compute3 will be included and all the tasks in your playbook will run on them, But compute1 will be completely skipped. with --limit we can also specify group name .. Say kube_control_plane then all the tasks will be run on that specific group. And we can also specify combinations like this. --limit kube_control_plane:!comoute1 means run on all compute hosts except for compute1.
+ 
